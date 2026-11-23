@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dot Dash — Day One, Day Seven</title>
+<style>
+  body { margin: 0; background: #12141a; color: #fff; font-family: system-ui, sans-serif; text-align: center; }
+  h1 { font-size: 22px; margin: 18px 0 4px; }
+  p { color: #b9becb; margin: 4px 16px 12px; }
+  canvas { background: #2b2f3a; border: 3px solid #444; max-width: 94vw; }
+  button { margin: 10px 6px; padding: 10px 18px; font-size: 16px; border-radius: 8px;
+           border: 0; background: #c41c83; color: #fff; cursor: pointer; }
+  button.off { background: #555; }
+</style>
+</head>
+<body>
+<h1>Dot Dash</h1>
+<p>One dot, one track. Day 1 is bare; Day 7 is a week of daily updates later.
+Space / tap to jump, collect the stars, dodge the spikes.</p>
+<canvas id="game" width="720" height="360"></canvas><br>
+<button id="toggle">Switch to Day 7</button>
+<button id="again">Restart</button>
+<p id="hud">SCORE 0 &nbsp;·&nbsp; DAY 1</p>
+<p>Tip: the dot runs the same route on both days — only the week of updates changes what it meets.</p>
+<script>
+"use strict";
+const cv = document.getElementById("game");
+const ctx = cv.getContext("2d");
+const hud = document.getElementById("hud");
+const toggle = document.getElementById("toggle");
+let day7 = false, score = 0, x = 60, vx = 2.6, vy = 0, onGround = true;
+let stars = [280, 460, 620].map(sx => ({ x: sx, got: false }));
+const spikes = [380, 540];
+let t = 0;
+
+toggle.onclick = () => {
+  day7 = !day7;
+  toggle.textContent = day7 ? "Switch to Day 1" : "Switch to Day 7";
+  toggle.classList.toggle("off", !day7);
+  restart();
+};
+document.getElementById("again").onclick = restart;
+function restart() {
+  score = 0; x = 60; vy = 0; onGround = true;
+  stars = [280, 460, 620].map(sx => ({ x: sx, got: false }));
+}
+function jump() { if (onGround) { vy = -11; onGround = false; } }
+addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); jump(); } });
+cv.addEventListener("pointerdown", jump);
+
+function step() {
+  t += 1;
+  x += vx;
+  if (x > 690 || x < 30) vx = -vx;
+  vy += 0.55;
+  let y = 300 - 24;
+  // the dot rides on the track; vy only moves it while jumping
+  window._dy = (window._dy || 0) + vy;
+  if (window._dy > 0) { window._dy = 0; vy = 0; onGround = true; }
+  y += window._dy;
+  stars.forEach(s => { if (!s.got && Math.abs(x - s.x) < 34 && Math.abs(y - 220) < 90) { s.got = true; score += 10; } });
+  if (day7) {
+    spikes.forEach(sx => { if (Math.abs(x - sx) < 30 && window._dy > -60) { score = Math.max(0, score - 5); } });
+  }
+  draw(y);
+  hud.textContent = "SCORE " + score + "  ·  DAY " + (day7 ? "7 — COMBO x7" : "1");
+  requestAnimationFrame(step);
+}
+function star(cx, cy, r, fill) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const rr = i % 2 ? r * 0.45 : r, a = -Math.PI / 2 + i * Math.PI / 5;
+    ctx[i ? "lineTo" : "moveTo"](cx + rr * Math.cos(a), cy + rr * Math.sin(a));
+  }
+  ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+}
+function draw(y) {
+  ctx.fillStyle = day7 ? "#1a1033" : "#2b2f3a";
+  ctx.fillRect(0, 0, 720, 360);
+  if (day7) {
+    ctx.fillStyle = "#fff";
+    for (let i = 0; i < 14; i++) ctx.fillRect((i * 53 + 20) % 720, (i * 37) % 130, 3, 3);
+  }
+  ctx.fillStyle = day7 ? "#ff40b4" : "#949aa8";
+  ctx.fillRect(20, 300, 680, 34);
+  ctx.fillStyle = day7 ? "#c41c83" : "#6b7280";
+  ctx.fillRect(20, 300, 680, 8);
+  stars.forEach(s => star(s.x, 220, 22, s.got ? "#ffd400" : "#787d8c"));
+  if (day7) {
+    ctx.fillStyle = "#ffd400";
+    [200, 380, 560].forEach(cx => { ctx.beginPath(); ctx.arc(cx, 270, 11, 0, 7); ctx.fill(); });
+    ctx.fillStyle = "#e8f0ff";
+    spikes.forEach(sx => { ctx.beginPath(); ctx.moveTo(sx - 24, 300); ctx.lineTo(sx, 252); ctx.lineTo(sx + 24, 300); ctx.fill(); });
+  }
+  ctx.beginPath(); ctx.arc(x, y, 20, 0, 7);
+  ctx.fillStyle = day7 ? "#ff40b4" : "#e2e8f0"; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = "#fff"; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x - 6, y - 6, 4, 0, 7); ctx.arc(x + 8, y - 6, 4, 0, 7);
+  ctx.fillStyle = "#fff"; ctx.fill();
+}
+restart();
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
